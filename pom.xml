@@ -80,6 +80,9 @@
         <docker.jib-maven-plugin.version>2.6.0</docker.jib-maven-plugin.version>
         <docker.image.prefix>springcommunity</docker.image.prefix>
 
+        <sonar.login>admin</sonar.login>
+        <sonar.password>op14092003</sonar.password>  
+
     </properties>
 
     <dependencyManagement>
