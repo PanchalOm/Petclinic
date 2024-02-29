@@ -1,82 +1,90 @@
-pipeline {
-    agent any 
+pipeline{
     
-    tools{
-        jdk 'jdk11'
-        maven 'maven3'
+    agent any
+    tools {
+        jdk 'JAVA_HOME'
+        maven 'MAVEN_HOME'
     }
-    
     environment {
-        SCANNER_HOME=tool 'sonar-scanner'
+        PATH = "$PATH:C:/maven/apache-maven-3.9.6-bin (3)/apache-maven-3.9.6/bin"
     }
-    
     stages{
-        
-        stage("Git Checkout"){
+  
+       stage('Code Compile'){
             steps{
-                git branch: 'main', changelog: false, poll: false, url: 'https://github.com/jaiswaladi246/Petclinic.git'
+                 bat 'mvn clean compile'
+                
             }
-        }
-        
-        stage("Compile"){
+         }
+         
+         
+       stage('Unit test'){
             steps{
-                sh "mvn clean compile"
+                 bat 'mvn test'
+                
             }
-        }
-        
-         stage("Test Cases"){
+         }
+         
+        stage('Integration test'){
             steps{
-                sh "mvn test"
+                 bat 'mvn verify -DskipUnitTests'
+                
             }
-        }
-        
-        stage("Sonarqube Analysis "){
+         }
+         
+         stage('Maven build'){
             steps{
-                withSonarQubeEnv('sonar-server') {
-                    sh ''' $SCANNER_HOME/bin/sonar-scanner -Dsonar.projectName=Petclinic \
-                    -Dsonar.java.binaries=. \
-                    -Dsonar.projectKey=Petclinic '''
-    
-                }
+                 bat 'mvn clean install'
+                
             }
-        }
+         }
         
-        stage("OWASP Dependency Check"){
+         stage('OWASP Dependency Check'){
             steps{
-                dependencyCheck additionalArguments: '--scan ./ --format HTML ', odcInstallation: 'DP'
-                dependencyCheckPublisher pattern: '**/dependency-check-report.xml'
+                 dependencyCheck additionalArguments: '', odcInstallation: 'DP'
+                
             }
-        }
+         } 
+         
+       stage('Testing by sonar'){
+            steps{
+                
+                 bat ''' mvn sonar:sonar -Dsonar.url-http://localhost:9000/ -Dsonar.login-squ_abb67d36969df874cb80b76166032e71de78defa -Dsonar.projectname-petclinic \
+                     -Dsonar.java.binaries=. \
+                     -Dsonar.projectKey=petclinic '''
+            
+            }
+         }   
+         
+        stage('Code build'){
+            steps{
+                
+                 bat 'mvn clean package'
+            
+             }
+         } 
+    }
+    post{
         
-         stage("Build"){
-            steps{
-                sh " mvn clean install"
+          success{
+            
+             emailext attachLog: true, body: '''Your Petclinic pipeline is successfully completed.<br>
+For check pipeline result click the blog.<br><br>
+
+Thanks.<br>
+-DevOps Team Ximple Solutions''', subject: 'Petclinic pipeline result', to: 'ompanchalait@gmail.com'
+           
             }
-        }
-        
-        stage("Docker Build & Push"){
-            steps{
-                script{
-                   withDockerRegistry(credentialsId: '58be877c-9294-410e-98ee-6a959d73b352', toolName: 'docker') {
-                        
-                        sh "docker build -t image1 ."
-                        sh "docker tag image1 adijaiswal/pet-clinic123:latest "
-                        sh "docker push adijaiswal/pet-clinic123:latest "
-                    }
-                }
-            }
-        }
-        
-        stage("TRIVY"){
-            steps{
-                sh " trivy image adijaiswal/pet-clinic123:latest"
-            }
-        }
-        
-        stage("Deploy To Tomcat"){
-            steps{
-                sh "cp  /var/lib/jenkins/workspace/CI-CD/target/petclinic.war /opt/apache-tomcat-9.0.65/webapps/ "
-            }
+        failure{
+            emailext attachLog: true, body: '''Your Petclinic pipeline is unfortunately failed.<br>
+For check pipeline result click the blog.<br><br>
+
+Thanks.<br>
+-DevOps Team Ximple Solutions''', subject: 'Petclinic pipeline result', to: 'ompanchalait@gmail.com'
+           
         }
     }
 }
+
+
+
